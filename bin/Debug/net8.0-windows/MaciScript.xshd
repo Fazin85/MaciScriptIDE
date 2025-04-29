@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="CustomAssembly" extensions=".casm" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Comment" foreground="#008000" />
+  <Color name="String" foreground="#A31515" />
+  <Color name="Instruction" foreground="#0000FF" fontWeight="bold" />
+  <Color name="Register" foreground="#800080" />
+  <Color name="Number" foreground="#FF8000" />
+  <Color name="Label" foreground="#2B91AF" fontWeight="bold" />
+  <Color name="Directive" foreground="#800000" />
+  <Color name="Function" foreground="#2B91AF" fontWeight="bold" />
+  <Color name="Macro" foreground="#800000" fontWeight="bold" />
+  <Color name="Syscall" foreground="#FF0000" />
+
+  <!-- Main rule set -->
+  <RuleSet>
+    <!-- Comments -->
+    <Span color="Comment" begin=";" />
+
+    <!-- Strings -->
+    <Span color="String" begin="&quot;" end="&quot;" />
+
+    <!-- Registers -->
+    <Rule color="Register">
+      \b(R[0-9]|S[0-9])\b
+    </Rule>
+
+    <!-- Instructions -->
+    <Keywords color="Instruction">
+      <!-- Data Movement -->
+      <Word>Mov</Word>
+      <Word>Load</Word>
+      <Word>Store</Word>
+      <!-- Arithmetic -->
+      <Word>Add</Word>
+      <Word>Sub</Word>
+      <Word>Mul</Word>
+      <Word>Div</Word>
+      <Word>Fadd</Word>
+      <Word>Fsub</Word>
+      <Word>Fmul</Word>
+      <Word>Fdiv</Word>
+      <!-- Bitwise -->
+      <Word>And</Word>
+      <Word>Or</Word>
+      <Word>Xor</Word>
+      <Word>Shl</Word>
+      <Word>Shr</Word>
+      <!-- Comparison -->
+      <Word>Cmp</Word>
+      <!-- Control Flow -->
+      <Word>Jmp</Word>
+      <Word>Je</Word>
+      <Word>Jne</Word>
+      <Word>Jg</Word>
+      <Word>Jl</Word>
+      <Word>Jmpf</Word>
+      <Word>Jef</Word>
+      <Word>Jnef</Word>
+      <Word>Jgf</Word>
+      <Word>Jlf</Word>
+      <Word>Call</Word>
+      <Word>Ret</Word>
+      <!-- System -->
+      <Word>Syscall</Word>
+      <Word>Ldstr</Word>
+      <Word>Push</Word>
+      <Word>Pop</Word>
+    </Keywords>
+
+    <!-- Numbers -->
+    <Rule color="Number">
+      \b[0-9]+\b
+    </Rule>
+
+    <!-- Function -->
+    <Rule color="Function">
+      \bfunction\s+([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*:)
+    </Rule>
+
+    <!-- Labels -->
+    <Rule color="Label">
+      \b([a-zA-Z_][a-zA-Z0-9_]*)\s*:
+    </Rule>
+
+    <!-- Directives and Macro -->
+    <Rule color="Directive">
+      \bmacro\b
+    </Rule>
+
+    <!-- Syscall strings -->
+    <Rule color="Syscall">
+      syscall\s+"([^"]*)"
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

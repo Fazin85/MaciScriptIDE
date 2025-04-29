@@ -1,0 +1,74 @@
+﻿<Window x:Class="MaciScriptIDE.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        Title="MaciScript IDE" Height="600" Width="900">
+    <Window.Resources>
+        <!-- Custom style for TabItems to avoid binding issues -->
+        <Style x:Key="CustomTabItemStyle" TargetType="{x:Type TabItem}">
+            <Setter Property="Padding" Value="10,3,10,3" />
+            <Setter Property="HeaderTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <ContentPresenter Content="{Binding}" />
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Border Name="Border" 
+                              Margin="0,0,2,0" 
+                              Background="#F0F0F0" 
+                              BorderBrush="#C0C0C0" 
+                              BorderThickness="1,1,1,1" 
+                              CornerRadius="4,4,0,0">
+                            <ContentPresenter x:Name="ContentSite"
+                                            ContentSource="Header"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Margin="10,2"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="White" />
+                                <Setter TargetName="Border" Property="BorderThickness" Value="1,1,1,0" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Background" Value="#E0E0E0" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#D0D0D0" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <!-- File Explorer Panel -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Button Grid.Row="0" Content="Open Folder" Margin="5" Click="OpenFolderButton_Click" />
+            <TreeView Name="fileExplorer" Grid.Row="1" Margin="5" 
+                      SelectedItemChanged="FileExplorer_SelectedItemChanged">
+            </TreeView>
+        </Grid>
+        <!-- Editor Area with Tabs -->
+        <Grid Grid.Column="1">
+            <TabControl Name="editorTabs" Margin="5">
+                <!-- Apply the custom style -->
+                <TabControl.Resources>
+                    <Style TargetType="{x:Type TabItem}" BasedOn="{StaticResource CustomTabItemStyle}" />
+                </TabControl.Resources>
+            </TabControl>
+        </Grid>
+    </Grid>
+</Window>
