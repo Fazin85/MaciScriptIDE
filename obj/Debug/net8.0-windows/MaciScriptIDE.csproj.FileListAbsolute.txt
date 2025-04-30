@@ -21,3 +21,4 @@ E:\Repos\MaciScriptIDE\bin\Debug\net8.0-windows\ICSharpCode.AvalonEdit.dll
 E:\Repos\MaciScriptIDE\obj\Debug\net8.0-windows\MaciScriptIDE.csproj.AssemblyReference.cache
 E:\Repos\MaciScriptIDE\obj\Debug\net8.0-windows\MaciScri.A31D8474.Up2Date
 E:\Repos\MaciScriptIDE\bin\Debug\net8.0-windows\MaciScript.xshd
+E:\Repos\MaciScriptIDE\obj\Debug\net8.0-windows\MaciScriptIDE.sourcelink.json

@@ -4,6 +4,27 @@
         xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
         Title="MaciScript IDE" Height="600" Width="900">
     <Window.Resources>
+        <!-- Light Theme Colors -->
+        <SolidColorBrush x:Key="LightBackgroundBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="LightForegroundBrush" Color="#000000"/>
+        <SolidColorBrush x:Key="LightTabBackgroundBrush" Color="#F0F0F0"/>
+        <SolidColorBrush x:Key="LightTabBorderBrush" Color="#C0C0C0"/>
+        <SolidColorBrush x:Key="LightTreeViewBackgroundBrush" Color="#FFFFFF"/>
+
+        <!-- Dark Theme Colors -->
+        <SolidColorBrush x:Key="DarkBackgroundBrush" Color="#2D2D30"/>
+        <SolidColorBrush x:Key="DarkForegroundBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="DarkTabBackgroundBrush" Color="#252526"/>
+        <SolidColorBrush x:Key="DarkTabBorderBrush" Color="#3F3F46"/>
+        <SolidColorBrush x:Key="DarkTreeViewBackgroundBrush" Color="#252526"/>
+
+        <!-- Default Theme (Light) -->
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="WindowForegroundBrush" Color="#000000"/>
+        <SolidColorBrush x:Key="TabBackgroundBrush" Color="#F0F0F0"/>
+        <SolidColorBrush x:Key="TabBorderBrush" Color="#C0C0C0"/>
+        <SolidColorBrush x:Key="TreeViewBackgroundBrush" Color="#FFFFFF"/>
+
         <!-- Custom style for TabItems to avoid binding issues -->
         <Style x:Key="CustomTabItemStyle" TargetType="{x:Type TabItem}">
             <Setter Property="Padding" Value="10,3,10,3" />
@@ -18,20 +39,20 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type TabItem}">
                         <Border Name="Border" 
-                              Margin="0,0,2,0" 
-                              Background="#F0F0F0" 
-                              BorderBrush="#C0C0C0" 
-                              BorderThickness="1,1,1,1" 
-                              CornerRadius="4,4,0,0">
+                          Margin="0,0,2,0" 
+                          Background="{DynamicResource TabBackgroundBrush}" 
+                          BorderBrush="{DynamicResource TabBorderBrush}" 
+                          BorderThickness="1,1,1,1" 
+                          CornerRadius="4,4,0,0">
                             <ContentPresenter x:Name="ContentSite"
-                                            ContentSource="Header"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center"
-                                            Margin="10,2"/>
+                                        ContentSource="Header"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        Margin="10,2"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="White" />
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
                                 <Setter TargetName="Border" Property="BorderThickness" Value="1,1,1,0" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
@@ -45,25 +66,42 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource WindowBackgroundBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="250" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
+
         <!-- File Explorer Panel -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Button Grid.Row="0" Content="Open Folder" Margin="5" Click="OpenFolderButton_Click" />
             <TreeView Name="fileExplorer" Grid.Row="1" Margin="5" 
-                      SelectedItemChanged="FileExplorer_SelectedItemChanged">
+                      SelectedItemChanged="FileExplorer_SelectedItemChanged"
+                      Background="{DynamicResource TreeViewBackgroundBrush}"
+                      Foreground="{DynamicResource WindowForegroundBrush}">
             </TreeView>
+
+            <!-- Settings Panel -->
+            <Expander Grid.Row="2" Header="Settings" Margin="5" 
+                      Foreground="{DynamicResource WindowForegroundBrush}">
+                <StackPanel>
+                    <CheckBox x:Name="DarkModeCheckBox" Content="Dark Mode" Margin="5" 
+                              Checked="DarkModeCheckBox_CheckedChanged"
+                              Unchecked="DarkModeCheckBox_CheckedChanged"
+                              Foreground="{DynamicResource WindowForegroundBrush}"/>
+                    <!-- More settings can be added here -->
+                </StackPanel>
+            </Expander>
         </Grid>
+
         <!-- Editor Area with Tabs -->
         <Grid Grid.Column="1">
-            <TabControl Name="editorTabs" Margin="5">
+            <TabControl Name="editorTabs" Margin="5" Background="Transparent">
                 <!-- Apply the custom style -->
                 <TabControl.Resources>
                     <Style TargetType="{x:Type TabItem}" BasedOn="{StaticResource CustomTabItemStyle}" />

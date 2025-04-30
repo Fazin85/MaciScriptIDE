@@ -23,6 +23,92 @@ namespace MaciScriptIDE
             InitializeComponent();
             KeyDown += Window_KeyDown;
             LoadSyntaxHighlighting();
+
+            // Load application settings
+            ApplicationSettingsManager.Instance.Load();
+            ApplyTheme(ApplicationSettingsManager.Instance.Settings.IsDarkMode);
+
+            // Set the dark mode checkbox based on loaded settings
+            DarkModeCheckBox.IsChecked = ApplicationSettingsManager.Instance.Settings.IsDarkMode;
+        }
+
+        private void DarkModeCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            bool isDarkMode = DarkModeCheckBox.IsChecked ?? false;
+            ApplyTheme(isDarkMode);
+
+            // Save the setting
+            ApplicationSettingsManager.Instance.Settings.IsDarkMode = isDarkMode;
+            ApplicationSettingsManager.Instance.Save();
+        }
+
+        // Apply theme to all visual elements
+        private void ApplyTheme(bool isDarkMode)
+        {
+            if (isDarkMode)
+            {
+                // Apply dark theme
+                Resources["WindowBackgroundBrush"] = Resources["DarkBackgroundBrush"];
+                Resources["WindowForegroundBrush"] = Resources["DarkForegroundBrush"];
+                Resources["TabBackgroundBrush"] = Resources["DarkTabBackgroundBrush"];
+                Resources["TabBorderBrush"] = Resources["DarkTabBorderBrush"];
+                Resources["TreeViewBackgroundBrush"] = Resources["DarkTreeViewBackgroundBrush"];
+
+                // Set the TreeView foreground explicitly to ensure text is white
+                fileExplorer.Foreground = Brushes.White;
+
+                // Also update the tree view items style to ensure all items have white text
+                Style treeViewItemStyle = new(typeof(TreeViewItem));
+                treeViewItemStyle.Setters.Add(new Setter(ForegroundProperty, Brushes.White));
+                fileExplorer.Resources[typeof(TreeViewItem)] = treeViewItemStyle;
+
+                // Make sure the settings panel text is also white
+                DarkModeCheckBox.Foreground = Brushes.White;
+            }
+            else
+            {
+                // Apply light theme
+                Resources["WindowBackgroundBrush"] = Resources["LightBackgroundBrush"];
+                Resources["WindowForegroundBrush"] = Resources["LightForegroundBrush"];
+                Resources["TabBackgroundBrush"] = Resources["LightTabBackgroundBrush"];
+                Resources["TabBorderBrush"] = Resources["LightTabBorderBrush"];
+                Resources["TreeViewBackgroundBrush"] = Resources["LightTreeViewBackgroundBrush"];
+
+                // Reset the TreeView foreground to black
+                fileExplorer.Foreground = Brushes.Black;
+
+                // Update tree view items style for light mode
+                Style treeViewItemStyle = new(typeof(TreeViewItem));
+                treeViewItemStyle.Setters.Add(new Setter(ForegroundProperty, Brushes.Black));
+                fileExplorer.Resources[typeof(TreeViewItem)] = treeViewItemStyle;
+
+                // Reset settings panel text color
+                DarkModeCheckBox.Foreground = Brushes.Black;
+            }
+
+            // Apply theme to any open editors
+            foreach (var editor in openFiles.Values)
+            {
+                UpdateEditorTheme(editor, isDarkMode);
+            }
+        }
+
+        // Update theme settings for a specific editor
+        private void UpdateEditorTheme(TextEditor editor, bool isDarkMode)
+        {
+            if (isDarkMode)
+            {
+                editor.Background = (SolidColorBrush)Resources["DarkBackgroundBrush"];
+                editor.Foreground = (SolidColorBrush)Resources["DarkForegroundBrush"];
+            }
+            else
+            {
+                editor.Background = (SolidColorBrush)Resources["LightBackgroundBrush"];
+                editor.Foreground = (SolidColorBrush)Resources["LightForegroundBrush"];
+            }
+
+            // You may also need to update syntax highlighting colors based on the theme
+            // This can be more complex and might require different XSHD files for light/dark
         }
 
         // File Explorer Methods
@@ -34,11 +120,11 @@ namespace MaciScriptIDE
             {
                 currentProjectPath = dialog.SelectedPath;
                 Title = $"MaciScript IDE - {Path.GetFileName(currentProjectPath)}";
-                LoadProjectFiles(currentProjectPath);
+                LoadProjectRoot(currentProjectPath);
             }
         }
 
-        private void LoadProjectFiles(string path)
+        private void LoadProjectRoot(string path)
         {
             fileExplorer.Items.Clear();
             DirectoryInfo rootDir = new(path);
@@ -48,32 +134,86 @@ namespace MaciScriptIDE
                 Tag = rootDir.FullName,
                 IsExpanded = true
             };
-            PopulateDirectoryNodes(rootDir, rootItem);
+
+            // Add a dummy item to enable expanding
+            rootItem.Items.Add(CreateDummyNode());
+
+            // Handle the expansion of this root node immediately
+            rootItem.Expanded += DirectoryItem_Expanded;
+
             fileExplorer.Items.Add(rootItem);
+
+            // Since the root is already expanded, populate it immediately
+            PopulateOnExpand(rootItem);
         }
 
-        private static void PopulateDirectoryNodes(DirectoryInfo directory, TreeViewItem parentNode)
+        private static TreeViewItem CreateDummyNode()
         {
-            // Add subdirectories
-            foreach (var dir in directory.GetDirectories())
+            return new TreeViewItem { Header = "Loading..." };
+        }
+
+        private void DirectoryItem_Expanded(object sender, RoutedEventArgs e)
+        {
+            if (sender is TreeViewItem treeViewItem)
             {
-                TreeViewItem dirNode = new()
+                // Only populate if this is the first expansion (contains dummy node)
+                if (treeViewItem.Items.Count == 1 &&
+                    treeViewItem.Items[0] is TreeViewItem firstItem &&
+                    firstItem.Header.ToString() == "Loading...")
                 {
-                    Header = dir.Name,
-                    Tag = dir.FullName
-                };
-                parentNode.Items.Add(dirNode);
-                PopulateDirectoryNodes(dir, dirNode);
+                    PopulateOnExpand(treeViewItem);
+                }
+
+                // Remove the event to prevent it from firing again
+                treeViewItem.Expanded -= DirectoryItem_Expanded;
             }
-            // Add files
-            foreach (var file in directory.GetFiles())
+        }
+
+        private void PopulateOnExpand(TreeViewItem treeViewItem)
+        {
+            if (treeViewItem.Tag is not string path)
+                return;
+
+            try
             {
-                TreeViewItem fileNode = new()
+                // Clear the dummy item
+                treeViewItem.Items.Clear();
+
+                DirectoryInfo directoryInfo = new(path);
+
+                // Add subdirectories
+                foreach (var dir in directoryInfo.GetDirectories())
                 {
-                    Header = file.Name,
-                    Tag = file.FullName
-                };
-                parentNode.Items.Add(fileNode);
+                    TreeViewItem dirNode = new()
+                    {
+                        Header = dir.Name,
+                        Tag = dir.FullName
+                    };
+
+                    // Add a dummy item to enable expanding
+                    dirNode.Items.Add(CreateDummyNode());
+
+                    // Set up the expanded event
+                    dirNode.Expanded += DirectoryItem_Expanded;
+
+                    treeViewItem.Items.Add(dirNode);
+                }
+
+                // Add files
+                foreach (var file in directoryInfo.GetFiles())
+                {
+                    TreeViewItem fileNode = new()
+                    {
+                        Header = file.Name,
+                        Tag = file.FullName
+                    };
+                    treeViewItem.Items.Add(fileNode);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading directory: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -118,6 +258,7 @@ namespace MaciScriptIDE
                 };
 
                 ApplySyntaxHighlighting(textEditor, filePath);
+                UpdateEditorTheme(textEditor, ApplicationSettingsManager.Instance.Settings.IsDarkMode);
 
                 // Load content
                 string content = File.ReadAllText(filePath);

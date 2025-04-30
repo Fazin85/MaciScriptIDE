@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MaciScriptIDE")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+38af725839d20dc3b074485ad042c765592cd563")]
 [assembly: System.Reflection.AssemblyProductAttribute("MaciScriptIDE")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MaciScriptIDE")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
