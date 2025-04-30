@@ -294,7 +294,6 @@ namespace MaciScriptIDE
                 string content = File.ReadAllText(filePath);
                 textEditor.Text = content;
 
-                // Set up text changed event
                 textEditor.TextChanged += (s, args) =>
                 {
                     // Mark as modified
@@ -304,6 +303,16 @@ namespace MaciScriptIDE
                     {
                         modifiedFiles[tabPath] = true;
                         UpdateTabHeader(tabPath, true);
+
+                        // If we have an active search for this file, we should clear it when the file changes
+                        if (searchManagers.ContainsKey(tabPath) && searchPanel.Visibility == Visibility.Visible)
+                        {
+                            // Remove this line if you want to keep highlighting existing results
+                            searchManagers.Remove(tabPath);
+
+                            // Or keep the search manager but update UI to reflect that results may be outdated
+                            searchStatusText.Text = "Press Enter to search";
+                        }
                     }
                 };
 
@@ -348,6 +357,19 @@ namespace MaciScriptIDE
                 // Add to UI
                 editorTabs.Items.Add(newTab);
                 editorTabs.SelectedItem = newTab;
+
+                textEditor.TextChanged += TextEditor_TextChanged;
+
+                openFiles[filePath] = textEditor;
+                modifiedFiles[filePath] = false;
+
+                // Clear any previous search for this file when opening or reopening
+                searchManagers.Remove(filePath);
+                // If search panel is visible, update UI to reflect that search results were cleared
+                if (searchPanel.Visibility == Visibility.Visible)
+                {
+                    searchStatusText.Text = "Press Enter to search";
+                }
 
                 // Update window title
                 Title = $"MaciScript IDE - {fileName}";
@@ -434,6 +456,9 @@ namespace MaciScriptIDE
                 }
             }
 
+            // Clear any search results for this file
+            searchManagers.Remove(filePath);
+
             // Store the index of the tab to select after closing
             int index = editorTabs.Items.IndexOf(tabToClose);
 
@@ -463,7 +488,7 @@ namespace MaciScriptIDE
         }
 
         // Event handlers - make sure these are properly defined in your class
-        private void TextEditor_TextChanged(object sender, EventArgs e)
+        private void TextEditor_TextChanged(object? sender, EventArgs e)
         {
             // Mark as modified
             if (sender is not TextEditor textEditor) return;
@@ -663,6 +688,9 @@ namespace MaciScriptIDE
             }
             else
             {
+                // Clear highlighting when hiding panel
+                ClearSearchHighlighting();
+
                 // Return focus to editor when panel is hidden
                 if (editorTabs.SelectedItem is TabItem selectedTab &&
                     selectedTab.Content is TextEditor editor)
@@ -677,6 +705,9 @@ namespace MaciScriptIDE
         {
             searchPanel.Visibility = Visibility.Collapsed;
 
+            // Clear highlighting in the current editor
+            ClearSearchHighlighting();
+
             // Return focus to editor
             if (editorTabs.SelectedItem is TabItem selectedTab &&
                 selectedTab.Content is TextEditor editor)
@@ -685,11 +716,38 @@ namespace MaciScriptIDE
             }
         }
 
+
+
         private void SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                PerformSearch();
+                // Get the current tab and file path
+                if (editorTabs.SelectedItem is not TabItem selectedTab)
+                    return;
+
+                string? filePath = selectedTab.Tag?.ToString();
+                if (string.IsNullOrEmpty(filePath))
+                    return;
+
+                // Check if we already have search results for this file and the search text is the same
+                bool hasExistingSearch = searchManagers.TryGetValue(filePath, out SearchManager? searchManager) &&
+                                        searchManager != null &&
+                                        searchManager.HasResults &&
+                                        searchManager.SearchText == searchTextBox.Text;
+
+                // If we have existing results and file is not modified, just navigate to next result
+                if (hasExistingSearch && (!modifiedFiles.ContainsKey(filePath) || !modifiedFiles[filePath]))
+                {
+                    searchManager!.NavigateToNextResult();
+                    UpdateSearchStatus(searchManager);
+                }
+                else
+                {
+                    // Otherwise, perform a new search
+                    PerformSearch();
+                }
+
                 e.Handled = true;
             }
             else if (e.Key == Key.Escape)
@@ -700,6 +758,7 @@ namespace MaciScriptIDE
                 // Clear search
                 searchTextBox.Text = string.Empty;
                 ClearActiveSearch();
+                ClearSearchHighlighting();
 
                 // Return focus to editor
                 if (editorTabs.SelectedItem is TabItem selectedTab &&
@@ -709,6 +768,19 @@ namespace MaciScriptIDE
                 }
 
                 e.Handled = true;
+            }
+        }
+
+        private void ClearSearchHighlighting()
+        {
+            if (editorTabs.SelectedItem is TabItem selectedTab)
+            {
+                string? filePath = selectedTab.Tag?.ToString();
+                if (!string.IsNullOrEmpty(filePath) &&
+                    searchManagers.TryGetValue(filePath, out SearchManager? searchManager))
+                {
+                    searchManager.ClearHighlighting();
+                }
             }
         }
 
@@ -735,18 +807,33 @@ namespace MaciScriptIDE
             if (string.IsNullOrEmpty(filePath))
                 return;
 
-            // Get or create a search manager for this file
-            if (!searchManagers.TryGetValue(filePath, out SearchManager? searchManager))
+            // Check if we already have search results with the same search text
+            bool reusableSearch = searchManagers.TryGetValue(filePath, out SearchManager? searchManager) &&
+                                 searchManager != null &&
+                                 searchManager.SearchText == searchTextBox.Text &&
+                                 (!modifiedFiles.ContainsKey(filePath) || !modifiedFiles[filePath]);
+
+            if (reusableSearch)
             {
-                searchManager = new SearchManager(editor);
-                searchManagers[filePath] = searchManager;
+                // If search text hasn't changed and file isn't modified, just navigate to the next result
+                searchManager!.NavigateToNextResult();
+            }
+            else
+            {
+                // Either no previous search, search text changed, or file was modified
+                // Create a new search manager if needed
+                if (searchManager == null)
+                {
+                    searchManager = new SearchManager(editor);
+                    searchManagers[filePath] = searchManager;
+                }
+
+                // Perform the search
+                searchManager.Search(searchTextBox.Text);
             }
 
-            // Perform the search
-            searchManager.Search(searchTextBox.Text);
-
             // Update UI
-            UpdateSearchStatus(searchManager);
+            UpdateSearchStatus(searchManager!);
         }
 
         private void NavigateToNextResult()
