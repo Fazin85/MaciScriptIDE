@@ -99,9 +99,46 @@
             </Expander>
         </Grid>
 
-        <!-- Editor Area with Tabs -->
+        <!-- Editor Area with Tabs and Search Panel -->
         <Grid Grid.Column="1">
-            <TabControl Name="editorTabs" Margin="5" Background="Transparent">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Search Panel - Hidden by default -->
+            <Border Grid.Row="0" Name="searchPanel" Padding="5" BorderThickness="0,0,0,1" 
+                    BorderBrush="{DynamicResource TabBorderBrush}"
+                    Background="{DynamicResource WindowBackgroundBrush}"
+                    Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,5,0" 
+                               Foreground="{DynamicResource WindowForegroundBrush}"/>
+                    <TextBox Grid.Column="1" Name="searchTextBox" VerticalAlignment="Center" Margin="0,0,5,0"
+                             KeyDown="SearchTextBox_KeyDown"/>
+                    <Button Grid.Column="2" Name="prevSearchButton" Content="Previous" Width="70" Margin="0,0,5,0"
+                            Click="PrevSearchButton_Click" IsEnabled="False"/>
+                    <Button Grid.Column="3" Name="nextSearchButton" Content="Next" Width="70" Margin="0,0,5,0"
+                            Click="NextSearchButton_Click" IsEnabled="False"/>
+                    <StackPanel Grid.Column="4" Orientation="Horizontal">
+                        <TextBlock Name="searchStatusText" VerticalAlignment="Center" 
+                                   Foreground="{DynamicResource WindowForegroundBrush}" Width="120" Margin="0,0,5,0"/>
+                        <Button Name="closeSearchButton" Content="✕" Width="24" Click="CloseSearchButton_Click" 
+                                ToolTip="Close search"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Editor Tabs -->
+            <TabControl Name="editorTabs" Grid.Row="1" Margin="5" Background="Transparent">
                 <!-- Apply the custom style -->
                 <TabControl.Resources>
                     <Style TargetType="{x:Type TabItem}" BasedOn="{StaticResource CustomTabItemStyle}" />

@@ -17,12 +17,13 @@ namespace MaciScriptIDE
         private string currentProjectPath = "";
         private readonly Dictionary<string, TextEditor> openFiles = [];
         private readonly Dictionary<string, bool> modifiedFiles = [];
+        private readonly Dictionary<string, SearchManager> searchManagers = [];
 
         public MainWindow()
         {
             InitializeComponent();
             KeyDown += Window_KeyDown;
-            Closing += Window_Closing; // Add this line
+            Closing += Window_Closing;
             LoadSyntaxHighlighting();
 
             // Load application settings
@@ -33,7 +34,8 @@ namespace MaciScriptIDE
             DarkModeCheckBox.IsChecked = ApplicationSettingsManager.Instance.Settings.IsDarkMode;
 
             // Restore previous session
-            RestorePreviousSession(); // Add this line
+            RestorePreviousSession();
+            InitializeSearchFunctionality();
         }
 
         private void DarkModeCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
@@ -68,6 +70,9 @@ namespace MaciScriptIDE
 
                 // Make sure the settings panel text is also white
                 DarkModeCheckBox.Foreground = Brushes.White;
+
+                // Apply theme to search panel elements
+                searchStatusText.Foreground = Brushes.White;
             }
             else
             {
@@ -88,6 +93,9 @@ namespace MaciScriptIDE
 
                 // Reset settings panel text color
                 DarkModeCheckBox.Foreground = Brushes.Black;
+
+                // Apply theme to search panel elements
+                searchStatusText.Foreground = Brushes.Black;
             }
 
             foreach (TabItem tab in editorTabs.Items)
@@ -491,6 +499,24 @@ namespace MaciScriptIDE
                 SaveAllFiles();
                 e.Handled = true;
             }
+            // Ctrl+F to toggle search panel
+            else if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                ToggleSearchPanel();
+                e.Handled = true;
+            }
+            // F3 to find next (only when search panel is visible)
+            else if (e.Key == Key.F3 && Keyboard.Modifiers == ModifierKeys.None && searchPanel.Visibility == Visibility.Visible)
+            {
+                NavigateToNextResult();
+                e.Handled = true;
+            }
+            // Shift+F3 to find previous (only when search panel is visible)
+            else if (e.Key == Key.F3 && Keyboard.Modifiers == ModifierKeys.Shift && searchPanel.Visibility == Visibility.Visible)
+            {
+                NavigateToPreviousResult();
+                e.Handled = true;
+            }
         }
 
         // Add this method to save all modified files
@@ -620,6 +646,192 @@ namespace MaciScriptIDE
             {
                 editorTabs.SelectedIndex = activeTab;
             }
+        }
+
+        private void ToggleSearchPanel()
+        {
+            // Toggle visibility
+            searchPanel.Visibility = searchPanel.Visibility == Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            if (searchPanel.Visibility == Visibility.Visible)
+            {
+                // Focus search box when panel is shown
+                searchTextBox.Focus();
+                searchTextBox.SelectAll();
+            }
+            else
+            {
+                // Return focus to editor when panel is hidden
+                if (editorTabs.SelectedItem is TabItem selectedTab &&
+                    selectedTab.Content is TextEditor editor)
+                {
+                    editor.Focus();
+                }
+            }
+        }
+
+        // Handle closing the search panel
+        private void CloseSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            searchPanel.Visibility = Visibility.Collapsed;
+
+            // Return focus to editor
+            if (editorTabs.SelectedItem is TabItem selectedTab &&
+                selectedTab.Content is TextEditor editor)
+            {
+                editor.Focus();
+            }
+        }
+
+        private void SearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                PerformSearch();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                // Close search panel on Escape
+                searchPanel.Visibility = Visibility.Collapsed;
+
+                // Clear search
+                searchTextBox.Text = string.Empty;
+                ClearActiveSearch();
+
+                // Return focus to editor
+                if (editorTabs.SelectedItem is TabItem selectedTab &&
+                    selectedTab.Content is TextEditor editor)
+                {
+                    editor.Focus();
+                }
+
+                e.Handled = true;
+            }
+        }
+
+        private void PrevSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToPreviousResult();
+        }
+
+        private void NextSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToNextResult();
+        }
+
+        private void PerformSearch()
+        {
+            if (editorTabs.SelectedItem is not TabItem selectedTab ||
+                selectedTab.Content is not TextEditor editor ||
+                string.IsNullOrWhiteSpace(searchTextBox.Text))
+            {
+                return;
+            }
+
+            string? filePath = selectedTab.Tag?.ToString();
+            if (string.IsNullOrEmpty(filePath))
+                return;
+
+            // Get or create a search manager for this file
+            if (!searchManagers.TryGetValue(filePath, out SearchManager? searchManager))
+            {
+                searchManager = new SearchManager(editor);
+                searchManagers[filePath] = searchManager;
+            }
+
+            // Perform the search
+            searchManager.Search(searchTextBox.Text);
+
+            // Update UI
+            UpdateSearchStatus(searchManager);
+        }
+
+        private void NavigateToNextResult()
+        {
+            if (editorTabs.SelectedItem is not TabItem selectedTab)
+                return;
+
+            string? filePath = selectedTab.Tag?.ToString();
+            if (string.IsNullOrEmpty(filePath) || !searchManagers.TryGetValue(filePath, out SearchManager? searchManager))
+                return;
+
+            if (searchManager.NavigateToNextResult())
+            {
+                UpdateSearchStatus(searchManager);
+            }
+        }
+
+        private void NavigateToPreviousResult()
+        {
+            if (editorTabs.SelectedItem is not TabItem selectedTab)
+                return;
+
+            string? filePath = selectedTab.Tag?.ToString();
+            if (string.IsNullOrEmpty(filePath) || !searchManagers.TryGetValue(filePath, out SearchManager? searchManager))
+                return;
+
+            if (searchManager.NavigateToPreviousResult())
+            {
+                UpdateSearchStatus(searchManager);
+            }
+        }
+
+        private void UpdateSearchStatus(SearchManager searchManager)
+        {
+            if (searchManager.HasResults)
+            {
+                searchStatusText.Text = $"Result {searchManager.CurrentIndex} of {searchManager.ResultCount}";
+                prevSearchButton.IsEnabled = true;
+                nextSearchButton.IsEnabled = true;
+            }
+            else
+            {
+                searchStatusText.Text = "No results found";
+                prevSearchButton.IsEnabled = false;
+                nextSearchButton.IsEnabled = false;
+            }
+        }
+
+        private void ClearActiveSearch()
+        {
+            if (editorTabs.SelectedItem is not TabItem selectedTab)
+                return;
+
+            string? filePath = selectedTab.Tag?.ToString();
+            if (string.IsNullOrEmpty(filePath) || !searchManagers.TryGetValue(filePath, out SearchManager? searchManager))
+                return;
+
+            searchManager.ClearSearch();
+            searchStatusText.Text = string.Empty;
+            prevSearchButton.IsEnabled = false;
+            nextSearchButton.IsEnabled = false;
+        }
+
+        private void InitializeSearchFunctionality()
+        {
+            // Set up key bindings for the search
+            KeyDown += (s, e) =>
+            {
+                if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.F)
+                {
+                    // Toggle search panel
+                    ToggleSearchPanel();
+                    e.Handled = true;
+                }
+            };
+
+            // Update search when tab changes
+            editorTabs.SelectionChanged += (s, e) =>
+            {
+                // If search panel is visible and there's a search query, apply it to the newly selected tab
+                if (searchPanel.Visibility == Visibility.Visible && !string.IsNullOrEmpty(searchTextBox.Text))
+                {
+                    PerformSearch();
+                }
+            };
         }
     }
 
