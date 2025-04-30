@@ -1,4 +1,4 @@
-﻿using ICSharpCode.AvalonEdit;
+using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
@@ -22,6 +22,7 @@ namespace MaciScriptIDE
         {
             InitializeComponent();
             KeyDown += Window_KeyDown;
+            Closing += Window_Closing; // Add this line
             LoadSyntaxHighlighting();
 
             // Load application settings
@@ -30,6 +31,9 @@ namespace MaciScriptIDE
 
             // Set the dark mode checkbox based on loaded settings
             DarkModeCheckBox.IsChecked = ApplicationSettingsManager.Instance.Settings.IsDarkMode;
+
+            // Restore previous session
+            RestorePreviousSession(); // Add this line
         }
 
         private void DarkModeCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
@@ -84,6 +88,24 @@ namespace MaciScriptIDE
 
                 // Reset settings panel text color
                 DarkModeCheckBox.Foreground = Brushes.Black;
+            }
+
+            foreach (TabItem tab in editorTabs.Items)
+            {
+                if (tab.Header is DockPanel panel)
+                {
+                    foreach (var child in panel.Children)
+                    {
+                        if (child is TextBlock headerText)
+                        {
+                            headerText.Foreground = isDarkMode ? Brushes.White : Brushes.Black;
+                        }
+                        else if (child is Button closeButton)
+                        {
+                            closeButton.Foreground = isDarkMode ? Brushes.White : Brushes.Black;
+                        }
+                    }
+                }
             }
 
             // Apply theme to any open editors
@@ -289,7 +311,16 @@ namespace MaciScriptIDE
                 closeButton.Click += CloseTabButton_Click;
 
                 var header = new DockPanel();
-                var headerText = new TextBlock { Text = fileName, VerticalAlignment = VerticalAlignment.Center };
+                var headerText = new TextBlock
+                {
+                    Text = fileName,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = ApplicationSettingsManager.Instance.Settings.IsDarkMode ?
+                        Brushes.White : Brushes.Black
+                };
+                closeButton.Foreground = ApplicationSettingsManager.Instance.Settings.IsDarkMode ?
+                    Brushes.White : Brushes.Black;
+
                 DockPanel.SetDock(closeButton, Dock.Right);
                 header.Children.Add(closeButton);
                 header.Children.Add(headerText);
@@ -332,9 +363,14 @@ namespace MaciScriptIDE
                     // Get the text block (second child after close button)
                     TextBlock headerText = (TextBlock)panel.Children[1];
 
-                    // Update header
+                    // Update header text
                     string fileName = Path.GetFileName(filePath);
                     headerText.Text = isModified ? fileName + "*" : fileName;
+
+                    // Apply the correct foreground color based on theme
+                    headerText.Foreground = ApplicationSettingsManager.Instance.Settings.IsDarkMode ?
+                        Brushes.White : Brushes.Black;
+
                     break;
                 }
             }
@@ -489,23 +525,10 @@ namespace MaciScriptIDE
         {
             string extension = Path.GetExtension(filePath).ToLower();
 
-            // Set the appropriate highlighting definition based on file extension
-            editor.SyntaxHighlighting = extension switch
+            if (extension == ".maci")
             {
-                ".cs" => HighlightingManager.Instance.GetDefinition("C#"),
-                ".xml" or ".xaml" or ".config" or ".csproj" => HighlightingManager.Instance.GetDefinition("XML"),
-                ".js" => HighlightingManager.Instance.GetDefinition("JavaScript"),
-                ".html" or ".htm" => HighlightingManager.Instance.GetDefinition("HTML"),
-                ".css" => HighlightingManager.Instance.GetDefinition("CSS"),
-                ".json" => HighlightingManager.Instance.GetDefinition("JavaScript"),
-                ".sql" => HighlightingManager.Instance.GetDefinition("SQL"),
-                ".ps1" => HighlightingManager.Instance.GetDefinition("PowerShell"),
-                ".py" => HighlightingManager.Instance.GetDefinition("Python"),
-                ".vb" => HighlightingManager.Instance.GetDefinition("VB"),
-                ".cpp" or ".h" or ".hpp" => HighlightingManager.Instance.GetDefinition("C++"),
-                ".maci" => HighlightingManager.Instance.GetDefinition("MaciScript"),
-                _ => null,
-            };
+                editor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("MaciScript");
+            }
         }
 
         private static void LoadSyntaxHighlighting()
@@ -520,6 +543,82 @@ namespace MaciScriptIDE
             catch (Exception e)
             {
                 MessageBox.Show($"Error loading syntax highlighting: {e.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void Window_Closing(object? sender, CancelEventArgs e)
+        {
+            // Save open files
+            ApplicationSettingsManager.Instance.Settings.OpenFilePaths.Clear();
+            ApplicationSettingsManager.Instance.Settings.ActiveTabIndex = editorTabs.SelectedIndex;
+
+            foreach (TabItem tab in editorTabs.Items)
+            {
+                string? filePath = tab.Tag?.ToString();
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    // Check for unsaved changes
+                    if (modifiedFiles.TryGetValue(filePath, out bool isModified) && isModified)
+                    {
+                        string fileName = Path.GetFileName(filePath);
+                        var result = MessageBox.Show($"Save changes to {fileName}?", "Unsaved Changes",
+                            MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+
+                        if (result == MessageBoxResult.Cancel)
+                        {
+                            e.Cancel = true;
+                            return;
+                        }
+
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            // Save file
+                            if (openFiles.TryGetValue(filePath, out var editor))
+                            {
+                                File.WriteAllText(filePath, editor.Text);
+                            }
+                        }
+                    }
+
+                    ApplicationSettingsManager.Instance.Settings.OpenFilePaths.Add(filePath);
+                }
+            }
+
+            // Save current project directory
+            if (!string.IsNullOrEmpty(currentProjectPath))
+            {
+                ApplicationSettingsManager.Instance.Settings.LastOpenDirectory = currentProjectPath;
+            }
+
+            ApplicationSettingsManager.Instance.Save();
+        }
+
+        private void RestorePreviousSession()
+        {
+            // Restore previous project directory
+            string lastDir = ApplicationSettingsManager.Instance.Settings.LastOpenDirectory;
+            if (!string.IsNullOrEmpty(lastDir) && Directory.Exists(lastDir))
+            {
+                currentProjectPath = lastDir;
+                Title = $"MaciScript IDE - {Path.GetFileName(currentProjectPath)}";
+                LoadProjectRoot(currentProjectPath);
+            }
+
+            // Restore open files
+            List<string> filesToOpen = ApplicationSettingsManager.Instance.Settings.OpenFilePaths;
+            foreach (string filePath in filesToOpen)
+            {
+                if (File.Exists(filePath))
+                {
+                    OpenFileInTab(filePath);
+                }
+            }
+
+            // Restore active tab
+            int activeTab = ApplicationSettingsManager.Instance.Settings.ActiveTabIndex;
+            if (activeTab >= 0 && activeTab < editorTabs.Items.Count)
+            {
+                editorTabs.SelectedIndex = activeTab;
             }
         }
     }

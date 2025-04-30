@@ -6,6 +6,9 @@ namespace MaciScriptIDE
     public class ApplicationSettings
     {
         public bool IsDarkMode { get; set; } = false;
+        public string LastOpenDirectory { get; set; } = "";
+        public List<string> OpenFilePaths { get; set; } = [];
+        public int ActiveTabIndex { get; set; } = -1;
     }
 
     // Add this class to store application settings
@@ -18,7 +21,7 @@ namespace MaciScriptIDE
         public static ApplicationSettingsManager Instance => _instance ??= new ApplicationSettingsManager();
 
         public ApplicationSettings Settings => _settings ??= new ApplicationSettings();
-        private ApplicationSettings _settings;
+        private ApplicationSettings? _settings;
 
         // Private constructor for singleton pattern
         private ApplicationSettingsManager() { }
@@ -41,20 +44,7 @@ namespace MaciScriptIDE
                     // Check if the file content is valid
                     if (!string.IsNullOrWhiteSpace(json))
                     {
-                        // Use JsonSerializerOptions to provide more flexibility
-                        var options = new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true,
-                            WriteIndented = true
-                        };
-
-                        var loadedSettings = JsonSerializer.Deserialize<ApplicationSettings>(json, options);
-
-                        if (loadedSettings != null)
-                        {
-                            Settings.IsDarkMode = loadedSettings.IsDarkMode;
-                            // Copy other properties as needed
-                        }
+                        _settings = JsonSerializer.Deserialize<ApplicationSettings>(json);
                     }
                 }
             }

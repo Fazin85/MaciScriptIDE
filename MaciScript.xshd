@@ -1,15 +1,16 @@
 <?xml version="1.0"?>
-<SyntaxDefinition name="CustomAssembly" extensions=".casm" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
-  <Color name="Comment" foreground="#008000" />
-  <Color name="String" foreground="#A31515" />
-  <Color name="Instruction" foreground="#0000FF" fontWeight="bold" />
-  <Color name="Register" foreground="#800080" />
-  <Color name="Number" foreground="#FF8000" />
-  <Color name="Label" foreground="#2B91AF" fontWeight="bold" />
-  <Color name="Directive" foreground="#800000" />
-  <Color name="Function" foreground="#2B91AF" fontWeight="bold" />
-  <Color name="Macro" foreground="#800000" fontWeight="bold" />
-  <Color name="Syscall" foreground="#FF0000" />
+<SyntaxDefinition name="MaciScript" extensions=".maci" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- Colors balanced for both light and dark themes -->
+  <Color name="Comment" foreground="#60A060" />
+  <Color name="String" foreground="#D69D85" />
+  <Color name="Instruction" foreground="#569CD6" fontWeight="bold" />
+  <Color name="Register" foreground="#B8A2DC" />
+  <Color name="Number" foreground="#D7BA7D" />
+  <Color name="Label" foreground="#4EC9B0" fontWeight="bold" />
+  <Color name="Directive" foreground="#CE9178" />
+  <Color name="Function" foreground="#4EC9B0" fontWeight="bold" />
+  <Color name="Macro" foreground="#C586C0" fontWeight="bold" />
+  <Color name="Syscall" foreground="#D16969" />
 
   <!-- Main rule set -->
   <RuleSet>
@@ -21,55 +22,55 @@
 
     <!-- Registers -->
     <Rule color="Register">
-      \b(R[0-9]|S[0-9])\b
+      \b(R[0-9]|R1[0-5]|S[0-7])\b
     </Rule>
 
     <!-- Instructions -->
     <Keywords color="Instruction">
       <!-- Data Movement -->
-      <Word>Mov</Word>
-      <Word>Load</Word>
-      <Word>Store</Word>
+      <Word>mov</Word>
+      <Word>load</Word>
+      <Word>store</Word>
       <!-- Arithmetic -->
-      <Word>Add</Word>
-      <Word>Sub</Word>
-      <Word>Mul</Word>
-      <Word>Div</Word>
-      <Word>Fadd</Word>
-      <Word>Fsub</Word>
-      <Word>Fmul</Word>
-      <Word>Fdiv</Word>
+      <Word>add</Word>
+      <Word>sub</Word>
+      <Word>mul</Word>
+      <Word>div</Word>
+      <Word>fadd</Word>
+      <Word>fsub</Word>
+      <Word>fmul</Word>
+      <Word>fdiv</Word>
       <!-- Bitwise -->
-      <Word>And</Word>
-      <Word>Or</Word>
-      <Word>Xor</Word>
-      <Word>Shl</Word>
-      <Word>Shr</Word>
+      <Word>and</Word>
+      <Word>or</Word>
+      <Word>xor</Word>
+      <Word>shl</Word>
+      <Word>shr</Word>
       <!-- Comparison -->
-      <Word>Cmp</Word>
+      <Word>cmp</Word>
       <!-- Control Flow -->
-      <Word>Jmp</Word>
-      <Word>Je</Word>
-      <Word>Jne</Word>
-      <Word>Jg</Word>
-      <Word>Jl</Word>
-      <Word>Jmpf</Word>
-      <Word>Jef</Word>
-      <Word>Jnef</Word>
-      <Word>Jgf</Word>
-      <Word>Jlf</Word>
-      <Word>Call</Word>
-      <Word>Ret</Word>
+      <Word>jmp</Word>
+      <Word>je</Word>
+      <Word>jne</Word>
+      <Word>jg</Word>
+      <Word>jl</Word>
+      <Word>jmpf</Word>
+      <Word>jef</Word>
+      <Word>jnef</Word>
+      <Word>jgf</Word>
+      <Word>jlf</Word>
+      <Word>call</Word>
+      <Word>ret</Word>
       <!-- System -->
-      <Word>Syscall</Word>
-      <Word>Ldstr</Word>
-      <Word>Push</Word>
-      <Word>Pop</Word>
+      <Word>syscall</Word>
+      <Word>ldstr</Word>
+      <Word>push</Word>
+      <Word>pop</Word>
     </Keywords>
 
     <!-- Numbers -->
     <Rule color="Number">
-      \b[0-9]+\b
+      \b(0x[0-9a-fA-F]+|\d+(\.\d+)?)\b
     </Rule>
 
     <!-- Function -->
@@ -83,9 +84,10 @@
     </Rule>
 
     <!-- Directives and Macro -->
-    <Rule color="Directive">
-      \bmacro\b
-    </Rule>
+    <Keywords color="Directive">
+      <Word>macro</Word>
+      <Word>import</Word>
+    </Keywords>
 
     <!-- Syscall strings -->
     <Rule color="Syscall">
